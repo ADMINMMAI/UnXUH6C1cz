@@ -25,11 +25,15 @@ jobs:
               continue
             fi
 
+            # correct folder name (true case)
             name=$(basename "$folder")
 
-            # find image safely
-            image=$(find "$folder" -maxdepth 1 -type f \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.webp" -o -iname "*.gif" \) | head -n 1)
+            # find ANY image file (case-insensitive extension)
+            image=$(find "$folder" -maxdepth 1 -type f \
+              \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.webp" -o -iname "*.gif" -o -iname "*.bmp" -o -iname "*.svg" \) \
+              | head -n 1)
 
+            # skip if no image
             if [ -z "$image" ]; then
               echo "Skipping $folder (no image)"
               continue
@@ -41,9 +45,16 @@ jobs:
               continue
             fi
 
-            # normalize path
+            # normalize path (remove ./)
             image=$(echo "$image" | sed 's#^\./##')
 
+            # extract filename only
+            filename=$(basename "$image")
+
+            # FORCE correct casing using actual folder name
+            image="$name/$filename"
+
+            # write JSON
             if [ "$first" = true ]; then
               first=false
             else
