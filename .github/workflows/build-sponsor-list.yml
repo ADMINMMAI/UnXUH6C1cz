@@ -1,57 +1,37 @@
-name: Generate Sponsors JSON
+for folder in */
+do
+  if [[ "$folder" == ".github/" ]]; then
+    continue
+  fi
 
-on:
-  push:
-    paths:
-      - '**'
+  name=$(basename "$folder")
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
+  # find image safely
+  image=$(find "$folder" -maxdepth 1 -type f \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.webp" -o -iname "*.gif" \) | head -n 1)
 
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+  if [ -z "$image" ]; then
+    echo "Skipping $folder (no image)"
+    continue
+  fi
 
-      - name: Generate sponsors.json
-        run: |
-          echo "[" > sponsors.json
-          first=true
+  # require info.json
+  if [ ! -f "$folder/info.json" ]; then
+    echo "Skipping $folder (no info.json)"
+    continue
+  fi
 
-          for folder in */
-          do
-            # skip system folders
-            if [[ "$folder" == ".github/" ]]; then
-              continue
-            fi
+  # normalize path
+  image=$(echo "$image" | sed 's#^\./##')
 
-            name=$(basename "$folder")
+  if [ "$first" = true ]; then
+    first=false
+  else
+    echo "," >> sponsors.json
+  fi
 
-            image=$(ls "$folder"/*.{jpg,jpeg,png,webp,gif} 2>/dev/null | head -n 1)
+  echo "  {" >> sponsors.json
+  echo "    \"folder\": \"$name\"," >> sponsors.json
+  echo "    \"image\": \"$image\"" >> sponsors.json
+  echo "  }" >> sponsors.json
 
-            if [ -z "$image" ]; then
-              continue
-            fi
-
-            if [ "$first" = true ]; then
-              first=false
-            else
-              echo "," >> sponsors.json
-            fi
-
-            echo "  {" >> sponsors.json
-            echo "    \"folder\": \"$name\"," >> sponsors.json
-            echo "    \"image\": \"$image\"" >> sponsors.json
-            echo "  }" >> sponsors.json
-
-          done
-
-          echo "]" >> sponsors.json
-
-      - name: Commit sponsors.json
-        run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "actions@github.com"
-          git add sponsors.json
-          git commit -m "Auto update sponsors.json" || echo "No changes"
-          git push
+done
